@@ -1,6 +1,7 @@
--- next: einmalig im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
--- Ohne dieses Skript funktionieren Profilbild-Upload und "Konto löschen" nicht.
--- Name, Theme, Sprache und Sichtbarkeit brauchen es NICHT (die liegen in den User-Metadaten).
+-- next: im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
+-- Das Skript ist wiederholbar: du kannst es komplett erneut ausführen, ohne dass etwas kaputtgeht.
+-- Ohne dieses Skript funktionieren Profilbild-Upload, "Konto löschen", eindeutige Namen und die Nutzer-ID nicht.
+-- Theme, Sprache und Sichtbarkeit brauchen es NICHT (die liegen in den User-Metadaten).
 
 -- 1) Öffentlicher Bucket für Profilbilder (jeder Nutzer darf nur in seinen eigenen Ordner schreiben)
 insert into storage.buckets (id, name, public)
@@ -45,3 +46,140 @@ $$;
 
 revoke all on function public.delete_user() from public, anon;
 grant execute on function public.delete_user() to authenticated;
+
+-- 3) Profile: eindeutiger Benutzername + 22-stellige Nutzer-ID
+--    Jeder sieht nur sein eigenes Profil (inkl. ID). Die ID wird serverseitig vergeben und lässt sich nicht ändern.
+create table if not exists public.profiles (
+  id         uuid primary key references auth.users (id) on delete cascade,
+  user_code  text not null unique check (user_code ~ '^[1-9][0-9]{21}$'),
+  username   text not null check (char_length(username) between 2 and 32 and username = btrim(username)),
+  created_at timestamptz not null default now()
+);
+
+-- Name ist eindeutig, Groß-/Kleinschreibung egal ("Tim" und "tim" sind derselbe Name)
+create unique index if not exists profiles_username_key on public.profiles (lower(username));
+
+-- 22-stellige Zufalls-ID (erste Ziffer nie 0)
+create or replace function public.gen_user_code()
+returns text
+language plpgsql
+as $$
+declare
+  b bytea := decode(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'hex');
+  code text;
+  i int;
+begin
+  code := (get_byte(b, 0) % 9 + 1)::text;
+  for i in 1..21 loop
+    code := code || (get_byte(b, i) % 10)::text;
+  end loop;
+  return code;
+end;
+$$;
+
+-- Legt ein Profil an; ist der Wunschname schon vergeben, wird eine Zahl angehängt (Tim, Tim1, Tim2 ...)
+create or replace function public.create_profile(uid uuid, mail text, meta jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  base text;
+  candidate text;
+  n int := 0;
+  tries int := 0;
+begin
+  if exists (select 1 from public.profiles where id = uid) then
+    return;
+  end if;
+
+  base := coalesce(
+    nullif(btrim(meta ->> 'full_name'), ''),
+    nullif(btrim(meta ->> 'name'), ''),
+    nullif(btrim(split_part(coalesce(mail, ''), '@', 1)), ''),
+    'User'
+  );
+  base := btrim(left(regexp_replace(base, '\s+', ' ', 'g'), 32));
+  if char_length(base) < 2 then
+    base := 'User';
+  end if;
+  base := upper(left(base, 1)) || substr(base, 2);
+  candidate := base;
+
+  loop
+    tries := tries + 1;
+    if tries > 200 then
+      raise exception 'could not create profile';
+    end if;
+    begin
+      insert into public.profiles (id, user_code, username)
+      values (uid, public.gen_user_code(), candidate);
+      return;
+    exception when unique_violation then
+      if exists (select 1 from public.profiles where lower(username) = lower(candidate)) then
+        n := n + 1;
+        candidate := btrim(left(base, 32 - char_length(n::text))) || n::text;
+      end if;
+    end;
+  end loop;
+end;
+$$;
+
+-- Bei jeder neuen Registrierung automatisch ein Profil anlegen
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.create_profile(new.id, new.email, new.raw_user_meta_data);
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Bestehende Konten bekommen nachträglich ein Profil (Namen aus den bisherigen Daten)
+do $$
+declare
+  r record;
+begin
+  for r in
+    select u.id, u.email, u.raw_user_meta_data
+    from auth.users u
+    where not exists (select 1 from public.profiles p where p.id = u.id)
+    order by u.created_at
+  loop
+    perform public.create_profile(r.id, r.email, r.raw_user_meta_data);
+  end loop;
+end;
+$$;
+
+-- Hilfsfunktionen sind nicht von außen aufrufbar
+revoke all on function public.gen_user_code() from public, anon, authenticated;
+revoke all on function public.create_profile(uuid, text, jsonb) from public, anon, authenticated;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+
+-- Zugriff: nur das eigene Profil lesen; nur den Namen ändern (ID bleibt fest)
+alter table public.profiles enable row level security;
+
+drop policy if exists "profil lesen" on public.profiles;
+drop policy if exists "profil aendern" on public.profiles;
+
+create policy "profil lesen" on public.profiles
+  for select to authenticated
+  using (id = auth.uid());
+
+create policy "profil aendern" on public.profiles
+  for update to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+revoke all on public.profiles from anon, authenticated;
+grant select on public.profiles to authenticated;
+grant update (username) on public.profiles to authenticated;

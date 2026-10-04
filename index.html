@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>next</title>
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#09090b;--panel:#131316;--line:#26262c;--text:#f4f4f5;--muted:#8d8d98;--err:#ff7a7a;--ok:#ffffff}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Bricolage Grotesque',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;display:grid;place-items:center;padding:24px}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+input{-webkit-user-select:text;user-select:text}
+img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+main{width:100%;max-width:400px;text-align:center}
+.logo{width:72px;height:auto;display:block;margin:0 auto 28px}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+p.sub{color:var(--muted);margin:0 0 28px;line-height:1.5}
+form{display:grid;gap:12px;text-align:left}
+label{font-size:.85rem;color:var(--muted)}
+input{width:100%;margin-top:6px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font:inherit;font-size:1rem}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+input.code{text-align:center;font-size:1.8rem;font-weight:600;letter-spacing:.5em;padding-left:calc(16px + .5em)}
+button.primary{margin-top:6px;padding:14px;border:0;border-radius:12px;background:#fff;color:#09090b;font:inherit;font-weight:600;font-size:1rem;cursor:pointer}
+button.primary:disabled{opacity:.5;cursor:wait}
+.divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.85rem;margin:20px 0}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+button.oauth{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font:inherit;font-weight:600;font-size:1rem;cursor:pointer}
+button.oauth:hover{border-color:#44444d}
+.link{background:none;border:0;color:var(--text);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:0}
+.alt{margin-top:22px;color:var(--muted);font-size:.95rem}
+.msg{min-height:1.4em;margin:14px 0 0;font-size:.9rem;color:var(--err)}
+.msg.ok{color:var(--ok)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){main>section:not([hidden]){animation:in .3s ease}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.png" alt="next logo">
+
+  <section id="login">
+    <h1>Log in</h1>
+    <p class="sub">Welcome back to next.</p>
+    <form data-form="login">
+      <label>Email<input type="email" name="email" autocomplete="email" required></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Log in</button>
+    </form>
+    <div class="divider">or</div>
+    <button class="oauth" type="button" data-oauth="google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+    <p class="alt">No account yet? <button class="link" data-go="register">Sign up</button></p>
+  </section>
+
+  <section id="register" hidden>
+    <h1>Create account</h1>
+    <p class="sub">Sign up with your email and a password.</p>
+    <form data-form="register">
+      <label>Email<input type="email" name="email" autocomplete="email" required></label>
+      <label>Password (at least 8 characters)<input type="password" name="password" autocomplete="new-password" minlength="8" required></label>
+      <button class="primary" type="submit">Sign up</button>
+    </form>
+    <div class="divider">or</div>
+    <button class="oauth" type="button" data-oauth="google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+    <p class="alt">Already have an account? <button class="link" data-go="login">Log in</button></p>
+  </section>
+
+  <section id="verify" hidden>
+    <h1>Check your email</h1>
+    <p class="sub" id="verify-sub">We sent a code to your email.</p>
+    <form data-form="verify">
+      <input class="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" maxlength="8" aria-label="Verification code" required>
+      <button class="primary" type="submit">Verify</button>
+    </form>
+    <p class="alt">No email? <button class="link" id="resend">Send a new code</button></p>
+  </section>
+
+  <section id="welcome" hidden>
+    <h1 id="welcome-title">Welcome</h1>
+    <p class="sub">You're signed in.</p>
+    <button class="primary" id="logout" style="width:100%">Log out</button>
+  </section>
+
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://nrolzalmkculsjdulzyf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3b7cEJ4D5_YqiS-ajaxglQ_WX_48VwQ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = s => document.querySelector(s);
+const msg = $('#msg');
+let pendingEmail = '';
+
+function show(id){
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== id);
+  setMsg('');
+  const first = $('#'+id+' input'); if(first) first.focus();
+}
+function setMsg(t, ok){ msg.textContent = t; msg.className = 'msg' + (ok ? ' ok' : ''); }
+function showVerify(email){
+  pendingEmail = email;
+  $('#verify-sub').textContent = 'We sent a code to ' + email + '. Enter it below.';
+  show('verify');
+}
+function showWelcome(user){
+  const name = (user.email || '').split('@')[0];
+  $('#welcome-title').textContent = 'Welcome, ' + name;
+  show('welcome');
+}
+async function busy(form, fn){
+  const b = form.querySelector('button[type=submit]'); b.disabled = true;
+  try { await fn(); } catch(e){ setMsg(e.message || 'Something went wrong. Try again.'); }
+  b.disabled = false;
+}
+
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+
+document.querySelector('[data-form=register]').onsubmit = e => {
+  e.preventDefault(); const f = e.target;
+  busy(f, async () => {
+    const email = f.email.value.trim();
+    const { data, error } = await sb.auth.signUp({ email, password: f.password.value });
+    if (error) return setMsg(error.message);
+    if (data.user && data.user.identities && data.user.identities.length === 0)
+      return setMsg('This email is already registered. Log in instead.');
+    showVerify(email);
+  });
+};
+
+document.querySelector('[data-form=login]').onsubmit = e => {
+  e.preventDefault(); const f = e.target;
+  busy(f, async () => {
+    const email = f.email.value.trim();
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: f.password.value });
+    if (error) {
+      if (/not confirmed/i.test(error.message)) {
+        await sb.auth.resend({ type: 'signup', email });
+        showVerify(email); return setMsg('Please verify your email first. We sent a new code.', true);
+      }
+      return setMsg(error.message);
+    }
+    showWelcome(data.user);
+  });
+};
+
+document.querySelector('[data-form=verify]').onsubmit = e => {
+  e.preventDefault(); const f = e.target;
+  busy(f, async () => {
+    const { data, error } = await sb.auth.verifyOtp({ email: pendingEmail, token: f.code.value.trim(), type: 'signup' });
+    if (error) return setMsg('That code is wrong or expired. Check it or request a new one.');
+    showWelcome(data.user);
+  });
+};
+
+$('#resend').onclick = async () => {
+  const { error } = await sb.auth.resend({ type: 'signup', email: pendingEmail });
+  setMsg(error ? error.message : 'New code sent.', !error);
+};
+
+$('#logout').onclick = async () => { await sb.auth.signOut(); show('login'); };
+
+document.querySelectorAll('[data-oauth]').forEach(b => b.onclick = async () => {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: b.dataset.oauth,
+    options: { redirectTo: location.origin + location.pathname }
+  });
+  if (error) setMsg(error.message);
+});
+
+// Block copying, selecting, dragging and the context menu (inputs stay usable)
+const inField = e => e.target.closest && e.target.closest('input');
+['contextmenu','dragstart','selectstart','copy','cut'].forEach(ev =>
+  document.addEventListener(ev, e => { if (!inField(e)) e.preventDefault(); }));
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && ['c','x','s','u','p','a'].includes(k) && !inField(e)) e.preventDefault();
+});
+
+sb.auth.getSession().then(({ data }) => { if (data.session) showWelcome(data.session.user); });
+</script>
+</body>
+</html>

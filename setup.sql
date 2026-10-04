@@ -1,4 +1,4 @@
--- next v2: im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
+-- next v3: im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
 -- Das Skript ist wiederholbar: du kannst es komplett erneut ausführen, ohne dass etwas kaputtgeht.
 -- Ohne dieses Skript funktionieren Profilbild-Upload, "Konto löschen", eindeutige Namen und die Nutzer-ID nicht.
 -- Theme, Sprache und Sichtbarkeit brauchen es NICHT (die liegen in den User-Metadaten).
@@ -211,3 +211,63 @@ create policy "termine eigene" on public.appointments
 
 revoke all on public.appointments from anon;
 grant select, insert, update, delete on public.appointments to authenticated;
+
+-- 5) Aufgaben (Tab "Tasks"): jeder sieht und ändert nur seine eigenen
+create table if not exists public.tasks (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  title      text not null check (char_length(title) between 1 and 80),
+  day        date not null,
+  done       boolean not null default false,
+  done_at    timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists tasks_user_day on public.tasks (user_id, day);
+
+alter table public.tasks enable row level security;
+drop policy if exists "aufgaben eigene" on public.tasks;
+create policy "aufgaben eigene" on public.tasks
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+revoke all on public.tasks from anon;
+grant select, insert, update, delete on public.tasks to authenticated;
+
+-- 6) Ziele (monatlich / jährlich)
+create table if not exists public.goals (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  kind       text not null check (kind in ('monthly', 'yearly')),
+  period     text not null check (char_length(period) between 4 and 7),
+  text       text not null check (char_length(text) between 1 and 120),
+  done       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists goals_user_period on public.goals (user_id, kind, period);
+
+alter table public.goals enable row level security;
+drop policy if exists "ziele eigene" on public.goals;
+create policy "ziele eigene" on public.goals
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+revoke all on public.goals from anon;
+grant select, insert, update, delete on public.goals to authenticated;
+
+-- 7) Freitext zu den Zielen (ein Text pro Zeitraum)
+create table if not exists public.goal_notes (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  kind    text not null check (kind in ('monthly', 'yearly')),
+  period  text not null check (char_length(period) between 4 and 7),
+  body    text not null default '' check (char_length(body) <= 4000),
+  primary key (user_id, kind, period)
+);
+
+alter table public.goal_notes enable row level security;
+drop policy if exists "zieltext eigene" on public.goal_notes;
+create policy "zieltext eigene" on public.goal_notes
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+revoke all on public.goal_notes from anon;
+grant select, insert, update, delete on public.goal_notes to authenticated;

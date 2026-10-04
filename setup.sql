@@ -271,3 +271,6 @@ create policy "zieltext eigene" on public.goal_notes
   with check (user_id = auth.uid());
 revoke all on public.goal_notes from anon;
 grant select, insert, update, delete on public.goal_notes to authenticated;
+
+-- 8) v4: Aufgaben anpinnen (Dashboard)
+alter table public.tasks add column if not exists pinned boolean not null default false;

@@ -1,4 +1,4 @@
--- next: im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
+-- next v2: im Supabase SQL Editor ausführen (Dashboard -> SQL Editor -> New query).
 -- Das Skript ist wiederholbar: du kannst es komplett erneut ausführen, ohne dass etwas kaputtgeht.
 -- Ohne dieses Skript funktionieren Profilbild-Upload, "Konto löschen", eindeutige Namen und die Nutzer-ID nicht.
 -- Theme, Sprache und Sichtbarkeit brauchen es NICHT (die liegen in den User-Metadaten).
@@ -51,13 +51,18 @@ grant execute on function public.delete_user() to authenticated;
 --    Jeder sieht nur sein eigenes Profil (inkl. ID). Die ID wird serverseitig vergeben und lässt sich nicht ändern.
 create table if not exists public.profiles (
   id         uuid primary key references auth.users (id) on delete cascade,
-  user_code  text not null unique check (user_code ~ '^[1-9][0-9]{21}$'),
+  user_code  text not null unique check (user_code ~ '^next-[1-9][0-9]{21}$'),
   username   text not null check (char_length(username) between 2 and 32 and username = btrim(username)),
   created_at timestamptz not null default now()
 );
 
 -- Name ist eindeutig, Groß-/Kleinschreibung egal ("Tim" und "tim" sind derselbe Name)
 create unique index if not exists profiles_username_key on public.profiles (lower(username));
+
+-- v2-Migration: Nutzer-IDs heißen jetzt "next-" + 22 Ziffern (bestehende IDs bekommen das Präfix, Eindeutigkeit bleibt durch UNIQUE garantiert)
+alter table public.profiles drop constraint if exists profiles_user_code_check;
+update public.profiles set user_code = 'next-' || user_code where user_code !~ '^next-';
+alter table public.profiles add constraint profiles_user_code_check check (user_code ~ '^next-[1-9][0-9]{21}$');
 
 -- 22-stellige Zufalls-ID (erste Ziffer nie 0)
 create or replace function public.gen_user_code()
@@ -73,7 +78,7 @@ begin
   for i in 1..21 loop
     code := code || (get_byte(b, i) % 10)::text;
   end loop;
-  return code;
+  return 'next-' || code;
 end;
 $$;
 
@@ -183,3 +188,26 @@ create policy "profil aendern" on public.profiles
 revoke all on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
 grant update (username) on public.profiles to authenticated;
+
+-- 4) Kalender: Termine (jeder sieht und ändert nur seine eigenen)
+create table if not exists public.appointments (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  title      text not null check (char_length(title) between 1 and 80),
+  day        date not null,
+  at_time    time not null default '09:00',
+  done       boolean not null default false,
+  notified   boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists appointments_user_day on public.appointments (user_id, day);
+
+alter table public.appointments enable row level security;
+drop policy if exists "termine eigene" on public.appointments;
+create policy "termine eigene" on public.appointments
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+revoke all on public.appointments from anon;
+grant select, insert, update, delete on public.appointments to authenticated;
